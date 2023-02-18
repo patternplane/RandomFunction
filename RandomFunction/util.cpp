@@ -18,6 +18,10 @@ byte mirrorByte(byte b) {
 	return newB;
 }
 
+byte slideByte(byte b, byte pos) {
+	return (b << (pos % 8)) + (b >> (8 - (pos % 8)));
+}
+
 byte pullLeftByte(byte b) {
 	int i = 8;
 	while (i != 0 && getBit(b, i) != 1)
