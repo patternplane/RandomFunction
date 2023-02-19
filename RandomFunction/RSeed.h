@@ -29,6 +29,15 @@ typedef struct {
 	byte timer3;
 } RSeedData;
 
-RSeedData defaultRSeedData();
+RSeedData* defaultRSeedData();
+
+RSeedData* makeRSeed(
+	byte value1,
+	byte timer1,
+	byte value2,
+	byte timer2,
+	byte value3_1,
+	byte value3_2,
+	byte timer3);
 
 byte nextRSeed(RSeedData* rSeed);
