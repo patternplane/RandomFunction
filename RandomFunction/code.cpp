@@ -35,8 +35,6 @@ calculator calcul[CALCULATOR_LEN] = { calcul1, calcul2, calcul3 , calcul4, calcu
 
 // IV : Initial Value
 
-const int PRE_IV_USE_SIZE = 5;
-
 typedef struct {
 	RSeedData* IVRSeed;
 	byte seedEx;
@@ -44,14 +42,16 @@ typedef struct {
 	int IVLen;
 	int IVPos;
 	byte* preIVs;
-	int IVsPos;
 } IVData;
 
+byte nextJumbledIV(IVData* ivd);
 
 IVData* newIVData(byte* IVdata, int len) {
 	IVData* newiv = (IVData*)malloc(sizeof(IVData));
-	byte* IVCopy = (byte*)malloc(sizeof(byte)*len);
-	byte* newPreIVs = (byte*)malloc(sizeof(byte) * PRE_IV_USE_SIZE);
+	byte* IVCopy = (byte*)malloc(sizeof(byte) * len);
+	byte* newPreIVs = (byte*)malloc(sizeof(byte) * len);
+	for (int i = 0; i < len; i++)
+		newPreIVs[i] = IVCopy[i] = IVdata[i];
 	
 	newiv->IVRSeed = defaultRSeedData();
 	newiv->seedEx = 0;
@@ -59,37 +59,52 @@ IVData* newIVData(byte* IVdata, int len) {
 	newiv->IVLen = len;
 	newiv->IVPos = 0;
 	newiv->preIVs = newPreIVs;
-	newiv->IVsPos = 0;
 
-	for (int i = 0; i < 1024; i++)
+	for (int i = 0; i < len; i++)
 		nextJumbledIV(newiv);
 
 	return newiv;
 }
 
-byte nextJumbledIV(IVData* ivd) {
-	byte v1 = slideByte((ivd->IV)[ivd->IVPos], nextRSeed(ivd->IVRSeed));
-	byte v2 = (calcul[nextRSeed(ivd->IVRSeed) % CALCULATOR_LEN])(v1, ivd->IVRSeed)
-		^ ((ivd->preIVs)[ivd->IVsPos]);
+byte getNPreIV(IVData* ivd, int n) {
+	if (ivd->IVPos < (n + 1))
+		return (ivd->preIVs)[(ivd->IVLen) - 1 - n + (ivd->IVPos)];
+	else
+		return (ivd->preIVs)[(ivd->IVPos) - 1 - n];
+}
 
-	byte newValue = v2 + nextRSeed(ivd->IVRSeed) + ((nextRSeed(ivd->IVRSeed) % 2) ? v1 : (-v1));
+byte nextJumbledIV(IVData* ivd) {
+	byte newValue =
+		slideByte((ivd->IV)[ivd->IVPos] + (ivd->preIVs)[ivd->IVPos], nextRSeed(ivd->IVRSeed))
+		+ (
+			(
+				getNPreIV(ivd, 5)
+				+ getNPreIV(ivd, 3)
+			)
+			^ getNPreIV(ivd, 1)
+		)
+		- mirrorByte(nextRSeed(ivd->IVRSeed) ^ (ivd->IV)[ivd->IVPos])
+		+ slideByte(
+			(
+				getNPreIV(ivd, 1)
+				+ (ivd->IV)[ivd->IVPos]
+			)
+			^ nextRSeed(ivd->IVRSeed)
+			, nextRSeed(ivd->IVRSeed))
+		+ pullLeftByte((ivd->preIVs)[ivd->IVPos]);
 
 	ivd->IVPos = (ivd->IVPos + 1) % (ivd->IVLen);
-	(ivd->preIVs)[ivd->IVsPos] = newValue;
-	for (int i = 0; i < PRE_IV_USE_SIZE; i++)
-		(ivd->preIVs)[((ivd->IVsPos) + i) % PRE_IV_USE_SIZE] += newValue + nextRSeed(ivd->IVRSeed);
-	ivd->IVsPos = ((ivd->IVsPos) + 1) % PRE_IV_USE_SIZE;
-	if (ivd->seedEx == 255) {
+	(ivd->preIVs)[ivd->IVPos] = newValue;
+	if (ivd->seedEx == 255)
 		ivd->IVRSeed = makeRSeed(
-			ivd->preIVs[0 % PRE_IV_USE_SIZE],
-			ivd->preIVs[1 % PRE_IV_USE_SIZE],
-			ivd->preIVs[2 % PRE_IV_USE_SIZE],
-			ivd->preIVs[3 % PRE_IV_USE_SIZE],
-			ivd->preIVs[4 % PRE_IV_USE_SIZE],
-			nextRSeed(ivd->IVRSeed),
-			nextRSeed(ivd->IVRSeed));
-		ivd->seedEx++;
-	}
+			getNPreIV(ivd, 6),
+			getNPreIV(ivd, 5),
+			getNPreIV(ivd, 4),
+			getNPreIV(ivd, 3),
+			getNPreIV(ivd, 2),
+			getNPreIV(ivd, 1),
+			getNPreIV(ivd, 0));
+	ivd->seedEx++;
 
 	return newValue;
 }
@@ -98,5 +113,5 @@ byte nextJumbledIV(IVData* ivd) {
 
 int main() {
 
-	return 0;
+		return 0;
 }
