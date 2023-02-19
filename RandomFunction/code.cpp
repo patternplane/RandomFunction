@@ -111,7 +111,79 @@ byte nextJumbledIV(IVData* ivd) {
 
 
 
+
+void test() {
+	byte test1[] = { 0 };
+	byte test2[] = { 0 ,0,0,0 };
+	byte* test3 = (byte*)malloc(50000*sizeof(byte));
+
+	// all test
+
+	test1[0] = 255;
+	for (int i = 0; i < 4; i++)
+		test2[i] = 255;
+	for (int i = 0; i < 50000; i++)
+		test3[i] = 255;
+
+	// all test
+
+	// test3 test
+	test3[5549] = 254;
+	// test3 test
+
+
+}
+
+void run(byte* data, int len) {
+	IVData* d = newIVData(data, len);
+	for (int i = 0; i < 4; i++)
+		printb(nextJumbledIV(d));
+}
+
 int main() {
 
-		return 0;
+	byte test1[] = { 0 };
+	byte test2[] = { 0 ,0,0,0 };
+	byte* test3 = (byte*)malloc(50000 * sizeof(byte));
+	byte* test4 = (byte*)malloc(5000 * sizeof(byte));
+
+	/*run(test1,1);
+	printf("\n");
+	run(test2, 4);
+	printf("\n");
+	run(test3, 50000);
+	printf("\n\n");*/
+
+	test1[0] = 255;
+	for (int i = 0; i < 4; i++)
+		test2[i] = 255;
+	for (int i = 0; i < 50000; i++)
+		test3[i] = 255;
+	for (int i = 0; i < 5000; i++)
+		test4[i] = 255;
+
+
+	test3[120] = 254;
+
+	IVData* d[4] = { newIVData(test1,1), newIVData(test2,4), newIVData(test3,50000), newIVData(test4,5000) };
+	for (int i = 0; i < 120; i++) {
+		printb(nextJumbledIV(d[0]));
+		printf(" ");
+		printb(nextJumbledIV(d[1]));
+		printf(" ");
+		printb(nextJumbledIV(d[2]));
+		printf(" ");
+		printb(nextJumbledIV(d[3]));
+		printf(" \n");
+	}
+
+	/*run(test3, 50000);
+	printf("\n\n");
+
+	test3[5549] = 254;
+
+	run(test3, 50000);
+	printf("\n\n");*/
+
+	return 0;
 }
