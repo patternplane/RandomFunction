@@ -14,6 +14,8 @@ IVData* newIVData(byte* IVdata, int len) {
 	newiv->IV = IVCopy;
 	newiv->IVLen = len;
 	newiv->IVPos = 0;
+	for (int i = 0; i < PRE_IV_LEN; i++)
+		newiv->preIVs[i] = IVCopy[i % len] + nextRSeed(newiv->IVRSeed);
 	newiv->preIVPos = 0;
 	newiv->totalSum = 0;
 
