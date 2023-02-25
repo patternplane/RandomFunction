@@ -17,7 +17,7 @@ typedef struct {
 	byte totalSum;
 } IVData;
 
-IVData* newIVData(byte* IVdata, int len);
+IVData* makeIVData(byte* IVdata, int len);
 
 byte getNPreIV(IVData* ivd, int n);
 

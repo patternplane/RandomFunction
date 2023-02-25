@@ -3,7 +3,7 @@
 
 // IV : Initial Value
 
-IVData* newIVData(byte* IVdata, int len) {
+IVData* makeIVData(byte* IVdata, int len) {
 	IVData* newiv = (IVData*)malloc(sizeof(IVData));
 	byte* IVCopy = (byte*)malloc(sizeof(byte) * len);
 	for (int i = 0; i < len; i++)

@@ -64,7 +64,7 @@ void test() {
 }
 
 void run(byte* data, int len) {
-	IVData* d = newIVData(data, len);
+	IVData* d = makeIVData(data, len);
 	for (int i = 0; i < 4; i++)
 		printb(nextJumbledIV(d));
 }
@@ -96,7 +96,7 @@ int main() {
 
 	short rate[256] = { 0 };
 
-	IVData* d[4] = { newIVData(test1,1), newIVData(test2,4), newIVData(test3,50000), newIVData(test4,5000) };
+	IVData* d[4] = { makeIVData(test1,1), makeIVData(test2,4), makeIVData(test3,50000), makeIVData(test4,5000) };
 	for (int i = 0; i < 1024; i++) {
 		byte k = nextJumbledIV(d[1]);
 		printb(k);
