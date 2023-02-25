@@ -128,10 +128,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="code.cpp" />
+    <ClCompile Include="IV.cpp" />
     <ClCompile Include="RSeed.cpp" />
     <ClCompile Include="util.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="IV.h" />
     <ClInclude Include="RSeed.h" />
     <ClInclude Include="util.h" />
   </ItemGroup>
