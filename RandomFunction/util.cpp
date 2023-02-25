@@ -33,6 +33,17 @@ byte pullLeftByte(byte b) {
 		return (b << (8 - i));
 }
 
+byte pullRightByte(byte b) {
+	int i = 1;
+	while (i != 9 && getBit(b, i) != 1)
+		i++;
+
+	if (i == 9)
+		return 0;
+	else
+		return (b >> (i - 1));
+}
+
 void printb(byte b) {
 	printf("%d%d%d%d%d%d%d%d"
 		, getBit(b, 8)
