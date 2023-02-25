@@ -6,6 +6,17 @@
 
 // 모든 연산은 오버플로우를 고려하지 않은 상태임
 
+const int PRE_RD_LEN = 256;
+const int RD_RSEED_COUNT = 3;
+
+typedef struct {
+	IVData* iv;
+	byte preRD[PRE_RD_LEN];
+	int preRDPos;
+	RSeedData* rSeeds[RD_RSEED_COUNT];
+	byte rSeedEXs[RD_RSEED_COUNT];
+} RandData;
+
 typedef byte(*calculator)(byte, RSeedData*);
 const int CALCULATOR_LEN = 5;
 
@@ -35,9 +46,65 @@ byte calcul5(byte baseData, RSeedData* rSeed) {
 
 calculator calcul[CALCULATOR_LEN] = { calcul1, calcul2, calcul3 , calcul4, calcul5};
 
+RandData* makeRandData(byte* seedData, int len) {
+	RandData* newRD = (RandData*)malloc(sizeof(RandData));
 
+	newRD->iv = makeIVData(seedData, len);
+	for (int i = 0; i < PRE_RD_LEN; i++)
+		newRD->preRD[i] = nextJumbledIV(newRD->iv);
+	newRD->preRDPos = 0;
+	for (int i = 0; i < RD_RSEED_COUNT; i++) {
+		newRD->rSeeds[i] = makeRSeed(
+			nextJumbledIV(newRD->iv),
+			nextJumbledIV(newRD->iv),
+			nextJumbledIV(newRD->iv),
+			nextJumbledIV(newRD->iv),
+			nextJumbledIV(newRD->iv),
+			nextJumbledIV(newRD->iv),
+			nextJumbledIV(newRD->iv)
+		);
+		newRD->rSeedEXs[i] = 0;
+	}
 
+	return newRD;
+}
 
+byte getNPreRD(RandData* rd, int n) {
+	n++;
+	int pos = (rd->preRDPos - n) % PRE_RD_LEN;
+	if (pos < 0)
+		pos += PRE_RD_LEN;
+	return (rd->preRD)[pos];
+}
+
+byte nextRDRSeed(RandData* rd) {
+	int index = 
+		(getNPreRD(rd, 51)
+			+ getNPreRD(rd, 125)
+			+ getNPreRD(rd, 15)
+			+ getNPreIV(rd->iv, 32)
+		) % RD_RSEED_COUNT;
+
+	for (int i = 0; i < RD_RSEED_COUNT; i++)
+		if (i != index)
+			nextRSeed(rd->rSeeds[i]);
+
+	return nextRSeed(rd->rSeeds[index]);
+}
+
+byte calculSelector(RandData* rd) {
+	return
+		pullRightByte(mirrorByte(
+			mirrorByte(
+				mirrorByte(
+					mirrorByte(
+						mirrorByte(getNPreRD(rd, 5) ^ getNPreIV(rd->iv, 227))
+						- getNPreRD(rd, 152) - nextJumbledIV(rd->iv))
+					+ nextJumbledIV(rd->iv) - getNPreRD(rd, 57))
+				+ getNPreIV(rd->iv, 121) + getNPreRD(rd, 23)))
+			- nextRDRSeed(rd))
+		% CALCULATOR_LEN;
+}
 
 
 
