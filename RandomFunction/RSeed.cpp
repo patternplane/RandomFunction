@@ -40,6 +40,24 @@ RSeedData* makeRSeed(
 	return a;
 }
 
+void setRSeedPreset(
+	RSeedData* rseed,
+	byte value1,
+	byte timer1,
+	byte value2,
+	byte timer2,
+	byte value3_1,
+	byte value3_2,
+	byte timer3) {
+	rseed->value1 = value1;
+	rseed->timer1 = (timer1 % TIMER1_LEN);
+	rseed->value2 = value2;
+	rseed->timer2 = !(!timer2);
+	rseed->value3_1 = value3_1;
+	rseed->value3_2 = value3_2;
+	rseed->timer3 = !(!timer3);
+}
+
 byte nextRSeed(RSeedData* rSeed) {
 	byte nextRSeed = rSeed->value1 + rSeed->value2 + (rSeed->timer3 ? rSeed->value3_1 : rSeed->value3_2);
 
