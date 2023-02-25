@@ -38,68 +38,100 @@ calculator calcul[CALCULATOR_LEN] = { calcul1, calcul2, calcul3 , calcul4, calcu
 
 // IV : Initial Value
 
+const int PRE_IV_LEN = 256;
+
 typedef struct {
 	RSeedData* IVRSeed;
 	byte seedEx;
 	byte* IV;
 	int IVLen;
 	int IVPos;
-	byte* preIVs;
+	byte preIVs[PRE_IV_LEN];
+	int preIVPos;
+	byte totalSum;
 } IVData;
 
 byte nextJumbledIV(IVData* ivd);
+byte getNPreIV(IVData* ivd, int n);
 
 IVData* newIVData(byte* IVdata, int len) {
 	IVData* newiv = (IVData*)malloc(sizeof(IVData));
 	byte* IVCopy = (byte*)malloc(sizeof(byte) * len);
-	byte* newPreIVs = (byte*)malloc(sizeof(byte) * len);
 	for (int i = 0; i < len; i++)
-		newPreIVs[i] = IVCopy[i] = IVdata[i];
+		IVCopy[i] = IVdata[i];
 
 	newiv->IVRSeed = defaultRSeedData();
 	newiv->seedEx = 0;
 	newiv->IV = IVCopy;
 	newiv->IVLen = len;
 	newiv->IVPos = 0;
-	newiv->preIVs = newPreIVs;
+	newiv->preIVPos = 0;
+	newiv->totalSum = 0;
 
-	for (int i = 0; i < len; i++)
-		nextJumbledIV(newiv);
+	int InitTurn = ((len < PRE_IV_LEN) ? (((PRE_IV_LEN / len) + 1) * len) : len);
+	for (int k = 0; k < 4; k++) {
+		for (int i = 0; i < InitTurn; i++)
+			nextJumbledIV(newiv);
+		setRSeedPreset(
+			newiv->IVRSeed,
+			getNPreIV(newiv, 32),
+			getNPreIV(newiv, 200),
+			getNPreIV(newiv, 50),
+			getNPreIV(newiv, 27),
+			getNPreIV(newiv, 159),
+			getNPreIV(newiv, 305),
+			getNPreIV(newiv, 202));
+	}
 
 	return newiv;
 }
 
 byte getNPreIV(IVData* ivd, int n) {
-	if (ivd->IVPos < (n + 1))
-		return (ivd->preIVs)[(ivd->IVLen) - 1 - n + (ivd->IVPos)];
-	else
-		return (ivd->preIVs)[(ivd->IVPos) - 1 - n];
+	n++;
+	int pos = (ivd->preIVPos - n) % PRE_IV_LEN;
+	if (pos < 0)
+		pos += PRE_IV_LEN;
+	return (ivd->preIVs)[pos];
 }
 
-byte nextJumbledIV(IVData* ivd) {
-	byte newValue =
-		slideByte((ivd->IV)[ivd->IVPos] + (ivd->preIVs)[ivd->IVPos], nextRSeed(ivd->IVRSeed))
+byte getLastestIV(IVData* ivd) {
+	int pos = (ivd->IVPos - 1) % ivd->IVLen;
+	if (pos < 0)
+		pos += ivd->IVLen;
+	return (ivd->IV)[pos];
+}
+
+byte IVJumbler(byte baseByte, IVData* ivd) {
+	return slideByte(baseByte + getNPreIV(ivd, PRE_IV_LEN - 1), nextRSeed(ivd->IVRSeed))
 		+ (
 			(
-				getNPreIV(ivd, 5)
-				+ getNPreIV(ivd, 3)
+				getNPreIV(ivd, 50)
+				+ getNPreIV(ivd, 30)
 				)
-			^ getNPreIV(ivd, 1)
+			^ getNPreIV(ivd, 112)
 			)
-		- mirrorByte(nextRSeed(ivd->IVRSeed) ^ (ivd->IV)[ivd->IVPos])
+		- mirrorByte(nextRSeed(ivd->IVRSeed) ^ baseByte)
 		+ slideByte(
 			(
-				getNPreIV(ivd, 1)
-				+ (ivd->IV)[ivd->IVPos]
+				getNPreIV(ivd, 135)
+				+ baseByte
 				)
 			^ nextRSeed(ivd->IVRSeed)
 			, nextRSeed(ivd->IVRSeed))
-		+ pullLeftByte((ivd->preIVs)[ivd->IVPos]);
+		+ pullLeftByte(getNPreIV(ivd, PRE_IV_LEN - 1))
+		+ slideByte(mirrorByte(ivd->totalSum), nextRSeed(ivd->IVRSeed));
+}
 
+byte nextJumbledIV(IVData* ivd) {
+	byte newValue = IVJumbler(getLastestIV(ivd), ivd);
+
+	(ivd->IV)[ivd->IVPos] = newValue;
 	ivd->IVPos = (ivd->IVPos + 1) % (ivd->IVLen);
-	(ivd->preIVs)[ivd->IVPos] = newValue;
+	(ivd->preIVs)[ivd->preIVPos] = newValue;
+	ivd->preIVPos = (ivd->preIVPos + 1) % PRE_IV_LEN;
 	if (ivd->seedEx == 255)
-		ivd->IVRSeed = makeRSeed(
+		setRSeedPreset(
+			ivd->IVRSeed,
 			getNPreIV(ivd, 6),
 			getNPreIV(ivd, 5),
 			getNPreIV(ivd, 4),
@@ -108,8 +140,9 @@ byte nextJumbledIV(IVData* ivd) {
 			getNPreIV(ivd, 1),
 			getNPreIV(ivd, 0));
 	ivd->seedEx++;
+	ivd->totalSum += newValue;
 
-	return newValue;
+	return IVJumbler(newValue, ivd);
 }
 
 
