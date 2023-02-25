@@ -3,7 +3,7 @@
 #include "util.h"
 #include "RSeed.h"
 
-
+// 모든 연산은 오버플로우를 고려하지 않은 상태임
 
 typedef byte(*calculator)(byte, RSeedData*);
 const int CALCULATOR_LEN = 5;
@@ -17,12 +17,15 @@ byte calcul2(byte baseData, RSeedData* rSeed) {
 }
 
 byte calcul3(byte baseData, RSeedData* rSeed) {
-	byte rseed = nextRSeed(rSeed);
+	byte rseed;
+	while ((rseed = nextRSeed(rSeed)) != 0);
 	return baseData + pullLeftByte(baseData%rseed) - baseData % rseed;
 }
 
 byte calcul4(byte baseData, RSeedData* rSeed) {
-	return pullLeftByte(baseData) + mirrorByte(baseData % nextRSeed(rSeed));
+	byte rseed;
+	while ((rseed = nextRSeed(rSeed)) != 0);
+	return pullLeftByte(baseData) + mirrorByte(baseData % rseed);
 }
 
 byte calcul5(byte baseData, RSeedData* rSeed) {
@@ -52,7 +55,7 @@ IVData* newIVData(byte* IVdata, int len) {
 	byte* newPreIVs = (byte*)malloc(sizeof(byte) * len);
 	for (int i = 0; i < len; i++)
 		newPreIVs[i] = IVCopy[i] = IVdata[i];
-	
+
 	newiv->IVRSeed = defaultRSeedData();
 	newiv->seedEx = 0;
 	newiv->IV = IVCopy;
@@ -80,15 +83,15 @@ byte nextJumbledIV(IVData* ivd) {
 			(
 				getNPreIV(ivd, 5)
 				+ getNPreIV(ivd, 3)
-			)
+				)
 			^ getNPreIV(ivd, 1)
-		)
+			)
 		- mirrorByte(nextRSeed(ivd->IVRSeed) ^ (ivd->IV)[ivd->IVPos])
 		+ slideByte(
 			(
 				getNPreIV(ivd, 1)
 				+ (ivd->IV)[ivd->IVPos]
-			)
+				)
 			^ nextRSeed(ivd->IVRSeed)
 			, nextRSeed(ivd->IVRSeed))
 		+ pullLeftByte((ivd->preIVs)[ivd->IVPos]);
