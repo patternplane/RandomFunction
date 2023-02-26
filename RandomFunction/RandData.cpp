@@ -59,7 +59,20 @@ RandData* makeRandData(byte* seedData, int len) {
 		newRD->rSeedEXs[i] = 0;
 	}
 
-
+	for (int k = 0; k < 4; k++) {
+		for (int i = 0; i < PRE_RD_LEN; i++)
+			nextRD(newRD);
+		for (int i = 0; i < RD_RSEED_COUNT; i++)
+			setRSeedPreset(
+				newRD->rSeeds[i],
+				getNPreRD(newRD, 32),
+				getNPreRD(newRD, 200),
+				getNPreRD(newRD, 50),
+				getNPreRD(newRD, 27),
+				getNPreRD(newRD, 159),
+				getNPreRD(newRD, 305),
+				getNPreRD(newRD, 202));
+	}
 
 	return newRD;
 }
