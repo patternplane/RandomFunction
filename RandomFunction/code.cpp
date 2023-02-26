@@ -89,6 +89,19 @@ byte nextRDRSeed(RandData* rd) {
 		if (i != index)
 			nextRSeed(rd->rSeeds[i]);
 
+	for (int i = 0; i < RD_RSEED_COUNT; i++)
+		if (rd->rSeedEXs[i] == 255)
+			setRSeedPreset(
+				rd->rSeeds[i],
+				nextJumbledIV(rd->iv) + nextRDRSeed(rd) - getNPreRD(rd,5),
+				nextJumbledIV(rd->iv) & (nextRDRSeed(rd) | getNPreRD(rd, 4)),
+				nextJumbledIV(rd->iv) + nextRDRSeed(rd),
+				nextJumbledIV(rd->iv) - nextRDRSeed(rd) + getNPreRD(rd, 5),
+				nextJumbledIV(rd->iv) + getNPreIV(rd->iv, 52),
+				nextJumbledIV(rd->iv) - getNPreIV(rd->iv, 102) ^ nextRDRSeed(rd),
+				nextJumbledIV(rd->iv) | nextRDRSeed(rd));
+	(rd->rSeedEXs[index])++;
+
 	return nextRSeed(rd->rSeeds[index]);
 }
 
