@@ -1,6 +1,8 @@
 #pragma once
 #include "IV.h"
-#include "RandDataCalulator.h"
+
+const int PRE_RD_LEN = 256;
+const int RD_RSEED_COUNT = 3;
 
 typedef struct {
 	IVData* iv;

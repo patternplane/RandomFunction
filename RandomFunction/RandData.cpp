@@ -1,8 +1,7 @@
 #include <stdlib.h>
 #include "RandData.h"
+#include "RandDataCalulator.h"
 
-const int PRE_RD_LEN = 256;
-const int RD_RSEED_COUNT = 3;
 
 byte getNPreRD(RandData* rd, int n) {
 	n++;
