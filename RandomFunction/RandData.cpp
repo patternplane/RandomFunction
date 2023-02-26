@@ -11,32 +11,38 @@ byte getNPreRD(RandData* rd, int n) {
 	return (rd->preRD)[pos];
 }
 
+byte sumOfRDRSeed = 0;
 byte nextRDRSeed(RandData* rd) {
 	int index =
-		(getNPreRD(rd, 51)
-			+ getNPreRD(rd, 125)
-			+ getNPreRD(rd, 15)
-			+ getNPreIV(rd->iv, 32)
-			) % RD_RSEED_COUNT;
+		(sumOfRDRSeed
+			+ mirrorByte(
+				getNPreRD(rd, 51)
+				+ getNPreRD(rd, 125)
+			) + mirrorByte(
+				getNPreRD(rd, 15)
+				+ getNPreIV(rd->iv, 32)
+			)) % RD_RSEED_COUNT;
 
 	for (int i = 0; i < RD_RSEED_COUNT; i++)
 		if (i != index)
-			nextRSeed(rd->rSeeds[i]);
+			sumOfRDRSeed += nextRSeed(rd->rSeeds[i]);
 
 	for (int i = 0; i < RD_RSEED_COUNT; i++)
 		if (rd->rSeedEXs[i] == 255)
 			setRSeedPreset(
 				rd->rSeeds[i],
-				nextJumbledIV(rd->iv) + nextRDRSeed(rd) - getNPreRD(rd, 5),
-				nextJumbledIV(rd->iv) & (nextRDRSeed(rd) | getNPreRD(rd, 4)),
-				nextJumbledIV(rd->iv) + nextRDRSeed(rd),
-				nextJumbledIV(rd->iv) - nextRDRSeed(rd) + getNPreRD(rd, 5),
+				nextJumbledIV(rd->iv) - getNPreRD(rd, 5),
+				nextJumbledIV(rd->iv) & getNPreRD(rd, 4),
+				nextJumbledIV(rd->iv) + getNPreIV(rd->iv, 35),
+				nextJumbledIV(rd->iv) + getNPreRD(rd, 5),
 				nextJumbledIV(rd->iv) + getNPreIV(rd->iv, 52),
-				nextJumbledIV(rd->iv) - getNPreIV(rd->iv, 102) ^ nextRDRSeed(rd),
-				nextJumbledIV(rd->iv) | nextRDRSeed(rd));
+				nextJumbledIV(rd->iv) - getNPreIV(rd->iv, 102),
+				nextJumbledIV(rd->iv));
 	(rd->rSeedEXs[index])++;
 
-	return nextRSeed(rd->rSeeds[index]);
+	byte outputValue = nextRSeed(rd->rSeeds[index]);
+	sumOfRDRSeed += outputValue;
+	return outputValue;
 }
 
 RandData* makeRandData(byte* seedData, int len) {
