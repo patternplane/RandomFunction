@@ -20,6 +20,18 @@ typedef struct {
 typedef byte(*calculator)(byte, RSeedData*);
 const int CALCULATOR_LEN = 5;
 
+byte preSelector(RandData* rd) {
+	return
+		mirrorByte(
+			pullRightByte(
+				nextJumbledIV(rd->iv)
+				& getNPreRD(rd, nextJumbledIV(rd->iv) - nextRDRSeed(rd)))
+			+ pullLeftByte(
+				nextRDRSeed(rd))
+			- getNPreIV(rd->iv, nextJumbledIV(rd->iv) - nextRDRSeed(rd)))
+		% 256;
+}
+
 byte calcul1(byte baseData, RSeedData* rSeed) {
 	return baseData ^ nextRSeed(rSeed);
 }
