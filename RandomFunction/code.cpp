@@ -17,7 +17,43 @@ typedef struct {
 	byte rSeedEXs[RD_RSEED_COUNT];
 } RandData;
 
-typedef byte(*calculator)(byte, RSeedData*);
+byte getNPreRD(RandData* rd, int n) {
+	n++;
+	int pos = (rd->preRDPos - n) % PRE_RD_LEN;
+	if (pos < 0)
+		pos += PRE_RD_LEN;
+	return (rd->preRD)[pos];
+}
+
+byte nextRDRSeed(RandData* rd) {
+	int index =
+		(getNPreRD(rd, 51)
+			+ getNPreRD(rd, 125)
+			+ getNPreRD(rd, 15)
+			+ getNPreIV(rd->iv, 32)
+			) % RD_RSEED_COUNT;
+
+	for (int i = 0; i < RD_RSEED_COUNT; i++)
+		if (i != index)
+			nextRSeed(rd->rSeeds[i]);
+
+	for (int i = 0; i < RD_RSEED_COUNT; i++)
+		if (rd->rSeedEXs[i] == 255)
+			setRSeedPreset(
+				rd->rSeeds[i],
+				nextJumbledIV(rd->iv) + nextRDRSeed(rd) - getNPreRD(rd, 5),
+				nextJumbledIV(rd->iv) & (nextRDRSeed(rd) | getNPreRD(rd, 4)),
+				nextJumbledIV(rd->iv) + nextRDRSeed(rd),
+				nextJumbledIV(rd->iv) - nextRDRSeed(rd) + getNPreRD(rd, 5),
+				nextJumbledIV(rd->iv) + getNPreIV(rd->iv, 52),
+				nextJumbledIV(rd->iv) - getNPreIV(rd->iv, 102) ^ nextRDRSeed(rd),
+				nextJumbledIV(rd->iv) | nextRDRSeed(rd));
+	(rd->rSeedEXs[index])++;
+
+	return nextRSeed(rd->rSeeds[index]);
+}
+
+typedef byte(*calculator)(RandData*);
 const int CALCULATOR_LEN = 5;
 
 byte preSelector(RandData* rd) {
@@ -32,31 +68,135 @@ byte preSelector(RandData* rd) {
 		% 256;
 }
 
-byte calcul1(byte baseData, RSeedData* rSeed) {
-	return baseData ^ nextRSeed(rSeed);
+byte calcul1(RandData* rd) {
+	return
+		getNPreRD(rd, preSelector(rd))
+		^ (
+			mirrorByte(
+				getNPreIV(rd->iv, preSelector(rd))
+				& getNPreRD(rd, preSelector(rd))
+			)
+			- nextJumbledIV(rd->iv)
+			+ pullLeftByte(
+				nextRDRSeed(rd)
+				^ getNPreIV(rd->iv, preSelector(rd))
+			)
+			+ pullRightByte(
+				nextRDRSeed(rd)
+				| getNPreIV(rd->iv, preSelector(rd))
+			)
+			)
+		^ slideByte(
+			mirrorByte(
+				getNPreIV(rd->iv, preSelector(rd))
+			)
+			+ nextJumbledIV(rd->iv)
+			, nextRDRSeed(rd) + getNPreRD(rd, preSelector(rd))
+		)
+		+ nextRDRSeed(rd);
 }
 
-byte calcul2(byte baseData, RSeedData* rSeed) {
-	return mirrorByte(baseData) + nextRSeed(rSeed);
+byte calcul2(RandData* rd) {
+	return
+		(getNPreRD(rd, preSelector(rd))
+			+ nextRDRSeed(rd)
+			)
+		^ (mirrorByte(
+			nextJumbledIV(rd->iv)
+		) + pullRightByte(
+			nextJumbledIV(rd->iv)
+		) - mirrorByte(
+			getNPreIV(rd->iv, preSelector(rd))
+			^ nextJumbledIV(rd->iv)
+			+ nextRDRSeed(rd)
+		)
+			)
+		+ pullLeftByte(
+			(
+				getNPreRD(rd, preSelector(rd))
+				| getNPreIV(rd->iv, preSelector(rd))
+				) ^ nextJumbledIV(rd->iv)
+		) - pullRightByte(
+			nextRDRSeed(rd)
+			+ getNPreIV(rd->iv, preSelector(rd))
+			+ getNPreIV(rd->iv, preSelector(rd))
+
+		);
 }
 
-byte calcul3(byte baseData, RSeedData* rSeed) {
-	byte rseed;
-	while ((rseed = nextRSeed(rSeed)) != 0);
-	return baseData + pullLeftByte(baseData%rseed) - baseData % rseed;
+byte calcul3(RandData* rd) {
+	return
+		nextJumbledIV(rd->iv)
+		^ mirrorByte(
+			nextRDRSeed(rd)
+			& nextJumbledIV(rd->iv)
+			| getNPreIV(rd->iv, preSelector(rd))
+			) + pullLeftByte(
+				slideByte(
+				nextJumbledIV(rd->iv)
+				- getNPreRD(rd, preSelector(rd))
+				, getNPreIV(rd->iv, preSelector(rd))
+			) & slideByte(
+				getNPreIV(rd->iv, preSelector(rd))
+				^ nextRDRSeed(rd)
+				- nextRDRSeed(rd)
+				, getNPreIV(rd->iv, preSelector(rd))
+			))
+		| getNPreRD(rd, preSelector(rd))
+		& nextJumbledIV(rd->iv);
 }
 
-byte calcul4(byte baseData, RSeedData* rSeed) {
-	byte rseed;
-	while ((rseed = nextRSeed(rSeed)) != 0);
-	return pullLeftByte(baseData) + mirrorByte(baseData % rseed);
+byte calcul4(RandData* rd) {
+	return
+		mirrorByte(
+			slideByte(
+			nextJumbledIV(rd->iv)
+			| nextRDRSeed(rd)
+			, slideByte(
+				getNPreIV(rd->iv, preSelector(rd))
+				+ getNPreRD(rd, preSelector(rd))
+				, nextRDRSeed(rd)
+				- getNPreIV(rd->iv, preSelector(rd))
+			) ^ nextRDRSeed(rd)
+		)
+		) + pullLeftByte(nextRDRSeed(rd)
+			& nextJumbledIV(rd->iv)
+			+ getNPreRD(rd, preSelector(rd))
+			) - pullRightByte(nextJumbledIV(rd->iv)
+				^ getNPreIV(rd->iv, preSelector(rd))
+				& nextJumbledIV(rd->iv)
+				);
 }
 
-byte calcul5(byte baseData, RSeedData* rSeed) {
-	return mirrorByte(pullLeftByte(baseData) ^ nextRSeed(rSeed));
+byte calcul5(RandData* rd) {
+	return
+		getNPreRD(rd, preSelector(rd))
+		^ (
+			pullRightByte(
+				getNPreIV(rd->iv, preSelector(rd))
+				- getNPreRD(rd, preSelector(rd))
+			)
+			- nextJumbledIV(rd->iv)
+			+ pullLeftByte(
+				nextRDRSeed(rd)
+				+ getNPreIV(rd->iv, preSelector(rd))
+			)
+			+ mirrorByte(
+				nextRDRSeed(rd)
+				| getNPreIV(rd->iv, preSelector(rd))
+			)
+			)
+		- slideByte(
+			mirrorByte(
+				getNPreIV(rd->iv, preSelector(rd))
+			)
+			+ nextJumbledIV(rd->iv)
+			, nextRDRSeed(rd) + getNPreRD(rd, preSelector(rd))
+		)
+		+ nextRDRSeed(rd);
 }
 
-calculator calcul[CALCULATOR_LEN] = { calcul1, calcul2, calcul3 , calcul4, calcul5};
+calculator calcul[CALCULATOR_LEN] = { calcul1, calcul2, calcul3, calcul4, calcul5};
 
 RandData* makeRandData(byte* seedData, int len) {
 	RandData* newRD = (RandData*)malloc(sizeof(RandData));
@@ -79,42 +219,6 @@ RandData* makeRandData(byte* seedData, int len) {
 	}
 
 	return newRD;
-}
-
-byte getNPreRD(RandData* rd, int n) {
-	n++;
-	int pos = (rd->preRDPos - n) % PRE_RD_LEN;
-	if (pos < 0)
-		pos += PRE_RD_LEN;
-	return (rd->preRD)[pos];
-}
-
-byte nextRDRSeed(RandData* rd) {
-	int index = 
-		(getNPreRD(rd, 51)
-			+ getNPreRD(rd, 125)
-			+ getNPreRD(rd, 15)
-			+ getNPreIV(rd->iv, 32)
-		) % RD_RSEED_COUNT;
-
-	for (int i = 0; i < RD_RSEED_COUNT; i++)
-		if (i != index)
-			nextRSeed(rd->rSeeds[i]);
-
-	for (int i = 0; i < RD_RSEED_COUNT; i++)
-		if (rd->rSeedEXs[i] == 255)
-			setRSeedPreset(
-				rd->rSeeds[i],
-				nextJumbledIV(rd->iv) + nextRDRSeed(rd) - getNPreRD(rd,5),
-				nextJumbledIV(rd->iv) & (nextRDRSeed(rd) | getNPreRD(rd, 4)),
-				nextJumbledIV(rd->iv) + nextRDRSeed(rd),
-				nextJumbledIV(rd->iv) - nextRDRSeed(rd) + getNPreRD(rd, 5),
-				nextJumbledIV(rd->iv) + getNPreIV(rd->iv, 52),
-				nextJumbledIV(rd->iv) - getNPreIV(rd->iv, 102) ^ nextRDRSeed(rd),
-				nextJumbledIV(rd->iv) | nextRDRSeed(rd));
-	(rd->rSeedEXs[index])++;
-
-	return nextRSeed(rd->rSeeds[index]);
 }
 
 byte calculSelector(RandData* rd) {
