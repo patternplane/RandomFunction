@@ -128,9 +128,17 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="code.cpp" />
+    <ClCompile Include="IV.cpp" />
+    <ClCompile Include="RandData.cpp" />
+    <ClCompile Include="RandDataCalulator.cpp" />
+    <ClCompile Include="RSeed.cpp" />
     <ClCompile Include="util.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="IV.h" />
+    <ClInclude Include="RandData.h" />
+    <ClInclude Include="RandDataCalulator.h" />
+    <ClInclude Include="RSeed.h" />
     <ClInclude Include="util.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
