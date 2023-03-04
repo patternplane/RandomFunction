@@ -64,10 +64,11 @@ RandData* makeRandData(byte* seedData, int len) {
 		);
 		newRD->rSeedEXs[i] = 0;
 	}
+	newRD->rdUseCount = 0;
 
 	for (int k = 0; k < 4; k++) {
 		for (int i = 0; i < PRE_RD_LEN; i++)
-			nextRD(newRD);
+			newRD->currentRDState = RDJumbler(newRD);
 		for (int i = 0; i < RD_RSEED_COUNT; i++)
 			setRSeedPreset(
 				newRD->rSeeds[i],
@@ -108,11 +109,32 @@ byte applyCalcul(RandData* rd) {
 	return newValue;
 }
 
-byte nextRD(RandData* rd) {
+byte RDJumbler(RandData* rd) {
 	byte newValue = applyCalcul(rd);
 
 	(rd->preRD)[rd->preRDPos] = newValue;
 	rd->preRDPos = (rd->preRDPos + 1) % PRE_RD_LEN;
 
 	return (calcul[calculSelector(rd)])(newValue, rd);
+}
+
+byte nextRD(RandData* rd) {
+	if (rd->rdUseCount == RD_USE_LIMIT) {
+		rd->currentRDState = RDJumbler(rd);
+		rd->rdUseCount = 0;
+	}
+
+	byte preRD = getNPreRD(rd, (rd->rdUseCount)+1);
+	byte newValue =
+		slideByte(
+			rd->currentRDState
+			+ mirrorByte(
+				pullLeftByte(preRD)
+				+ pullRightByte(preRD)
+			), preRD);
+
+	rd->currentRDState += preRD - newValue;
+	rd->rdUseCount++;
+
+	return newValue;
 }
